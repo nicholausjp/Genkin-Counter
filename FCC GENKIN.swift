@@ -1,0 +1,670 @@
+import SwiftUI
+import WebKit
+
+struct ContentView: View {
+    var body: some View {
+        WebView()
+            .ignoresSafeArea()
+    }
+}
+
+struct WebView: UIViewRepresentable {
+    let html = """
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>現金集計 / Yen Counter</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="現金集計">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%231a1a2e' rx='40'/%3E%3Ctext x='90' y='115' font-size='80' text-anchor='middle' fill='%23c9a84c' font-family='serif'%3E円%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --paper: #faf8f3;
+    --gold: #c9a84c;
+    --gold-light: #e8d5a3;
+    --red: #8b1a1a;
+    --line: #d4c9a8;
+    --shadow: rgba(26,26,46,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    background: #eee8d8;
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── PAGE ── */
+  .page-wrapper {
+    max-width: 430px;
+    margin: 0 auto;
+    background: var(--paper);
+    min-height: 100vh;
+    box-shadow: 0 0 40px var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  
+
+  /* ── HEADER ── */
+  
+  
+  
+  
+
+  /* ── DATE ROW ── */
+  .date-row {
+    padding: 60px 20px 15px;
+    font-size: 11px;
+    color: #999;
+    letter-spacing: 0.1em;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* ── INSTALL BANNER ── */
+  #install-banner {
+    display: none;
+    margin: 0 20px 12px;
+    background: #f0ebe0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 11px;
+    color: #666;
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+  #install-banner strong { color: var(--ink); }
+
+  /* ── SECTION LABELS ── */
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold);
+    padding: 16px 28px 6px;
+    font-weight: 400;
+  }
+
+  /* ── DENOM ROWS ── */
+  .denomination-list { padding: 0 20px; }
+  .denom-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--line);
+    gap: 12px;
+  }
+  .denom-row:last-child { border-bottom: none; }
+
+  .coin-bill-icon {
+    width: 38px; height: 38px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    font-weight: 800;
+    font-size: 9px;
+  }
+  .icon-bill      { border-radius: 5px; background: linear-gradient(135deg,#2d6e3e,#1a4a28); color:#c8e6c9; }
+  .icon-bill-5000 { background: linear-gradient(135deg,#5e3a7a,#3b1f55); color:#e1bee7; }
+  .icon-bill-1000 { background: linear-gradient(135deg,#1a5276,#0d3349); color:#bbdefb; }
+  .icon-coin-500  { background: radial-gradient(circle at 35% 35%,#f5d78e,#c9a02a,#8a6a00); color:#fff; border:2px solid #b8860b; box-shadow:0 2px 4px rgba(0,0,0,.2); }
+  .icon-coin-100  { background: radial-gradient(circle at 35% 35%,#e0e0e0,#b0b0b0,#707070); color:#fff; border:2px solid #999; box-shadow:0 2px 4px rgba(0,0,0,.2); }
+  .icon-coin-50   { background: radial-gradient(circle at 35% 35%,#e8e8e8,#c0c0c0,#888); color:#333; border:2px solid #aaa; box-shadow:0 2px 4px rgba(0,0,0,.2); }
+  .icon-coin-10   { background: radial-gradient(circle at 35% 35%,#cd9b5a,#a0622a,#6b3c0f); color:#fff; border:2px solid #8b5e3c; box-shadow:0 2px 4px rgba(0,0,0,.2); }
+  .icon-coin-5    { background: radial-gradient(circle at 35% 35%,#f5d78e,#c9a02a,#8a6a00); color:#fff; border:2px solid #b8860b; box-shadow:0 2px 4px rgba(0,0,0,.2); }
+  .icon-coin-1    { background: radial-gradient(circle at 35% 35%,#f0f0f0,#d8d8d8,#b0b0b0); color:#666; border:2px solid #ccc; box-shadow:0 2px 4px rgba(0,0,0,.12); }
+
+  .denom-info { flex: 1; }
+  .denom-name-jp { font-family:'Hiragino Mincho ProN', 'Yu Mincho', serif; font-size:15px; font-weight:600; }
+  .denom-name-en  { font-size:10px; color:#888; letter-spacing:.1em; }
+  .denom-subtotal { font-family:'Hiragino Mincho ProN', 'Yu Mincho', serif; font-size:13px; font-weight:600; color:var(--gold); min-width:80px; text-align:right; }
+
+  /* ── QTY CONTROL ── */
+  .qty-control { display:flex; align-items:center; border:1.5px solid var(--line); border-radius:8px; overflow:hidden; flex-shrink:0; }
+  .qty-btn {
+    width:32px; height:36px;
+    background:none; border:none;
+    font-size:18px; color:var(--ink);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    -webkit-tap-highlight-color:transparent;
+    font-weight:300;
+  }
+  .qty-btn:active { background:var(--line); }
+  .qty-input {
+    width:44px; height:36px;
+    border:none;
+    border-left:1px solid var(--line);
+    border-right:1px solid var(--line);
+    text-align:center;
+    font-family:'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    font-size:16px; font-weight:600;
+    color:var(--ink);
+    background:var(--paper);
+    -webkit-appearance:none;
+    outline:none;
+  }
+
+  /* ── TOTAL ── */
+  .total-section {
+      margin: 8px 20px 20px;
+      background: var(--ink);
+      border-radius: 12px;
+      padding: 8px 20px;
+      color: var(--paper);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .total-section:active { opacity: 0.85; }
+  .total-section::after {
+    content:'円';
+    position:absolute; right:16px; bottom:-8px;
+    font-family:'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    font-size:80px; font-weight:800;
+    color:rgba(255,255,255,.05);
+    pointer-events:none;
+  }
+  .total-label { font-size:10px; letter-spacing:.35em; text-transform:uppercase; color:var(--gold-light); margin-bottom:6px; }
+  .total-amount { font-family:'Hiragino Mincho ProN', 'Yu Mincho', serif; font-size:24px; font-weight:800; color:#fff; letter-spacing:.05em; }
+  .total-amount .currency { font-size:18px; color:var(--gold-light); margin-right:4px; }
+  .total-tap-hint { font-size:10px; color:rgba(255,255,255,0.35); letter-spacing:.12em; text-align:right; line-height:1.6; flex-shrink:0; }
+
+  /* ── ACTIONS ── */
+  
+  .btn-reset {
+      padding: 5px 14px;
+      background: none;
+      border: 1.5px solid var(--line);
+      border-radius: 20px;
+      font-family: "Noto Serif JP", serif;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: #999;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+    }
+    .btn-reset:active { background: var(--line); }
+  
+
+  /* ── SUMMARY MODAL ── */
+  #summary-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.6);
+    z-index: 1000;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+  #summary-overlay.active { display: flex; }
+
+  .summary-card {
+    background: var(--paper);
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 44px;
+    width: 100%;
+    max-width: 430px;
+    max-height: 88vh;
+    overflow-y: auto;
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+
+  .summary-
+  .summary-title {
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+  .summary-subtitle {
+    font-size: 11px;
+    color: #999;
+    letter-spacing: 0.1em;
+    margin-top: 3px;
+  }
+  .summary-close {
+    width: 32px; height: 32px;
+    border: none;
+    background: #eee;
+    border-radius: 50%;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── SUMMARY TABLE ── */
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 0;
+    font-size: 14px;
+  }
+  .summary-table thead tr {
+    border-bottom: 2px solid var(--ink);
+  }
+  .summary-table thead th {
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #888;
+    padding: 0 6px 8px;
+    text-align: left;
+  }
+  .summary-table thead th:nth-child(2),
+  .summary-table thead th:nth-child(3) { text-align: right; }
+
+  .summary-table tbody tr {
+    border-bottom: 1px solid var(--line);
+  }
+  .summary-table tbody tr:last-child { border-bottom: none; }
+  .summary-table tbody td {
+    padding: 9px 6px;
+    font-family: 'Noto Serif JP', serif;
+    color: var(--ink);
+  }
+  .summary-table tbody td:nth-child(2) {
+    text-align: right;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    font-weight: 600;
+    color: #555;
+  }
+  .summary-table tbody td:nth-child(3) {
+    text-align: right;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    font-weight: 600;
+    color: var(--gold);
+  }
+  .summary-table .zero-row td { color: #ccc; }
+  .summary-table .zero-row td:nth-child(2),
+  .summary-table .zero-row td:nth-child(3) { color: #ddd; }
+
+  .summary-divider { height: 2px; background: var(--ink); margin: 0; }
+
+  .summary-total-row td {
+    padding: 12px 6px 4px !important;
+    font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+    font-weight: 800 !important;
+    font-size: 17px !important;
+    color: var(--ink) !important;
+    border-bottom: none !important;
+  }
+  .summary-total-row td:nth-child(3) {
+    color: var(--red) !important;
+    font-size: 19px !important;
+  }
+
+  /* ── COPY BUTTON ── */
+  .copy-btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 14px;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .15s;
+  }
+  .copy-btn:active { background: #333; }
+  .copy-btn.copied {
+    background: #2d6e3e;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  
+
+  <div class="date-row">
+    <span id="today-date"></span>
+    <button class="btn-reset" onclick="resetAll()">リセット · Reset</button>
+    <span id="today-time"></span>
+  </div>
+
+  <div id="install-banner">
+    📲 <strong>ホーム画面に追加</strong> — Safariの共有ボタン →「ホーム画面に追加」<br>
+    <span style="color:#aaa">Tap Share in Safari → "Add to Home Screen"</span>
+  </div>
+
+  <div class="section-label">紙幣 · Bills</div>
+  <div class="denomination-list" id="bill-list"></div>
+
+  <div class="section-label">硬貨 · Coins</div>
+  <div class="denomination-list" id="coin-list"></div>
+
+  <div class="total-section" onclick="showSummary()">
+    <div>
+      <div class="total-label">合計金額 · Total Amount</div>
+      <div class="total-amount"><span class="currency">¥</span><span id="total-display">0</span></div>
+    </div>
+    <div class="total-tap-hint">集計 · コピー<br>▶</div>
+  </div>
+
+</div>
+
+<!-- Summary sheet -->
+<div id="summary-overlay" onclick="overlayTap(event)">
+  <div class="summary-card" id="summary-card">
+    <div class="summary-header">
+      <div>
+        <div class="summary-title">現金集計表</div>
+        <div class="summary-subtitle" id="summary-date"></div>
+      </div>
+      <button class="summary-close" onclick="closeSummary()">✕</button>
+    </div>
+
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>種類</th>
+          <th>枚数</th>
+          <th>小計</th>
+        </tr>
+      </thead>
+      <tbody id="summary-tbody"></tbody>
+    </table>
+
+    <button class="copy-btn" id="copy-btn" onclick="copyToClipboard()">
+      ⎘ &nbsp;コピーする &nbsp;·&nbsp; Copy All
+    </button>
+  </div>
+</div>
+
+<script>
+var DENOMS = [
+  { value:10000, labelJp:'一万円札',  labelEn:'¥10,000', iconClass:'icon-bill',                iconText:'10,000', section:'bill' },
+  { value:5000,  labelJp:'五千円札',  labelEn:'¥5,000',  iconClass:'icon-bill icon-bill-5000', iconText:'5,000',  section:'bill' },
+  { value:1000,  labelJp:'千円札',    labelEn:'¥1,000',  iconClass:'icon-bill icon-bill-1000', iconText:'1,000',  section:'bill' },
+  { value:500,   labelJp:'五百円玉',  labelEn:'¥500',    iconClass:'icon-coin-500', iconText:'500', section:'coin' },
+  { value:100,   labelJp:'百円玉',    labelEn:'¥100',    iconClass:'icon-coin-100', iconText:'100', section:'coin' },
+  { value:50,    labelJp:'五十円玉',  labelEn:'¥50',     iconClass:'icon-coin-50',  iconText:'50',  section:'coin' },
+  { value:10,    labelJp:'十円玉',    labelEn:'¥10',     iconClass:'icon-coin-10',  iconText:'10',  section:'coin' },
+  { value:5,     labelJp:'五円玉',    labelEn:'¥5',      iconClass:'icon-coin-5',   iconText:'5',   section:'coin' },
+  { value:1,     labelJp:'一円玉',    labelEn:'¥1',      iconClass:'icon-coin-1',   iconText:'1',   section:'coin' },
+];
+
+var quantities = {};
+DENOMS.forEach(function(d) { quantities[d.value] = 0; });
+
+function buildList() {
+  DENOMS.forEach(function(d) {
+    var container = document.getElementById(d.section + '-list');
+    var row = document.createElement('div');
+    row.className = 'denom-row';
+    row.innerHTML =
+      '<div class="coin-bill-icon ' + d.iconClass + '">' + d.iconText + '</div>' +
+      '<div class="denom-info">' +
+        '<div class="denom-name-jp">' + d.labelJp + '</div>' +
+        '<div class="denom-name-en">' + d.labelEn + '</div>' +
+      '</div>' +
+      '<div class="denom-subtotal" id="sub-' + d.value + '">—</div>' +
+      '<div class="qty-control">' +
+        '<button class="qty-btn" onclick="change(' + d.value + ',-1)">−</button>' +
+        '<input class="qty-input" type="number" inputmode="numeric" min="0" id="qty-' + d.value + '" value="0" oninput="setQty(' + d.value + ',this.value)">' +
+        '<button class="qty-btn" onclick="change(' + d.value + ',1)">＋</button>' +
+      '</div>';
+    container.appendChild(row);
+  });
+}
+
+// ── HAPTICS ──
+// When running inside the Xcode WKWebView, this calls the native Swift handler.
+// On regular Safari/browser it does nothing (no error).
+function haptic(type) {
+  try {
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic) {
+      window.webkit.messageHandlers.haptic.postMessage(type);
+    }
+  } catch(e) {}
+}
+
+function change(value, delta) {
+  var prev = quantities[value] || 0;
+  quantities[value] = Math.max(0, prev + delta);
+  document.getElementById('qty-' + value).value = quantities[value];
+  // Light tick on +/-, warning buzz if already at zero and trying to go lower
+  if (delta < 0 && prev === 0) {
+    haptic('warning');
+  } else {
+    haptic('light');
+  }
+  updateAll();
+}
+
+function setQty(value, raw) {
+  quantities[value] = Math.max(0, parseInt(raw) || 0);
+  haptic('light');
+  updateAll();
+}
+
+function updateAll() {
+  var total = 0;
+  var parts = [];
+  DENOMS.forEach(function(d) {
+    var qty = quantities[d.value] || 0;
+    var sub = qty * d.value;
+    total += sub;
+    var el = document.getElementById('sub-' + d.value);
+    if (el) el.textContent = qty > 0 ? '¥' + sub.toLocaleString() : '—';
+    if (qty > 0) parts.push(d.labelJp + ' × ' + qty);
+  });
+  document.getElementById('total-display').textContent = total.toLocaleString();
+  // breakdown removed
+}
+
+function resetAll() {
+  DENOMS.forEach(function(d) {
+    quantities[d.value] = 0;
+    var inp = document.getElementById('qty-' + d.value);
+    if (inp) inp.value = 0;
+  });
+  haptic('medium');
+  updateAll();
+}
+
+function setDateTime() {
+  var now = new Date();
+  document.getElementById('today-date').textContent =
+    now.toLocaleDateString('ja-JP', {year:'numeric', month:'long', day:'numeric', weekday:'short'});
+  document.getElementById('today-time').textContent =
+    now.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+}
+
+function showSummary() {
+  setDateTime();
+  var now = new Date();
+  document.getElementById('summary-date').textContent =
+    now.toLocaleDateString('ja-JP', {year:'numeric', month:'long', day:'numeric', weekday:'short'}) +
+    '　' + now.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+
+  var tbody = document.getElementById('summary-tbody');
+  tbody.innerHTML = '';
+  var total = 0;
+
+  DENOMS.forEach(function(d) {
+    var qty = quantities[d.value] || 0;
+    var sub = qty * d.value;
+    total += sub;
+    var tr = document.createElement('tr');
+    if (qty === 0) tr.className = 'zero-row';
+    tr.innerHTML =
+      '<td>' + d.labelJp + '</td>' +
+      '<td>' + (qty > 0 ? qty + '枚' : '—') + '</td>' +
+      '<td>' + (qty > 0 ? '¥' + sub.toLocaleString() : '—') + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  // Total row
+  var tfoot = document.createElement('tr');
+  tfoot.className = 'summary-total-row';
+  tfoot.innerHTML =
+    '<td>合計</td>' +
+    '<td></td>' +
+    '<td>¥' + total.toLocaleString() + '</td>';
+  tbody.appendChild(tfoot);
+
+  // Reset copy button
+  var btn = document.getElementById('copy-btn');
+  btn.classList.remove('copied');
+  btn.innerHTML = '⎘ &nbsp;コピーする &nbsp;·&nbsp; Copy All';
+
+  haptic('medium');
+  document.getElementById('summary-overlay').classList.add('active');
+}
+
+function closeSummary() {
+  haptic('light');
+  document.getElementById('summary-overlay').classList.remove('active');
+}
+
+function overlayTap(e) {
+  if (e.target === document.getElementById('summary-overlay')) closeSummary();
+}
+
+function copyToClipboard() {
+  var now = new Date();
+  var dateStr = now.toLocaleDateString('ja-JP', {year:'numeric', month:'long', day:'numeric', weekday:'short'}) +
+    ' ' + now.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+
+  var lines = ['現金集計表', dateStr, ''];
+  lines.push('種類         枚数   小計');
+  lines.push('─────────────────────');
+
+  var total = 0;
+  DENOMS.forEach(function(d) {
+    var qty = quantities[d.value] || 0;
+    if (qty > 0) {
+      var sub = qty * d.value;
+      total += sub;
+      var name = d.labelJp;
+      var qtyStr = qty + '枚';
+      var subStr = '¥' + sub.toLocaleString();
+      lines.push(name + '\\t' + qtyStr + '\\t' + subStr);
+    }
+  });
+
+  lines.push('─────────────────────');
+  lines.push('合計\\t\\t¥' + total.toLocaleString());
+
+  var text = lines.join('\\n');
+
+  var btn = document.getElementById('copy-btn');
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      showCopied(btn);
+    }).catch(function() {
+      fallbackCopy(text, btn);
+    });
+  } else {
+    fallbackCopy(text, btn);
+  }
+}
+
+function fallbackCopy(text, btn) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showCopied(btn);
+  } catch(e) {
+    btn.innerHTML = '✕ コピー失敗 — テキストを手動でコピーしてください';
+  }
+  document.body.removeChild(ta);
+}
+
+function showCopied(btn) {
+  haptic('success');
+  btn.classList.add('copied');
+  btn.innerHTML = '✓ &nbsp;コピーしました &nbsp;·&nbsp; Copied!';
+  setTimeout(function() {
+    btn.classList.remove('copied');
+    btn.innerHTML = '⎘ &nbsp;コピーする &nbsp;·&nbsp; Copy All';
+  }, 2500);
+}
+
+// Show Add to Home Screen hint on iOS Safari
+function isIosSafari() {
+  var ua = navigator.userAgent;
+  return /iphone|ipad|ipod/i.test(ua) && /safari/i.test(ua) && !/crios|fxios/i.test(ua);
+}
+if (isIosSafari() && !navigator.standalone) {
+  document.getElementById('install-banner').style.display = 'block';
+}
+
+buildList();
+setDateTime();
+updateAll();
+</script>
+</body>
+</html>
+
+"""
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        let contentController = WKUserContentController()
+        contentController.add(HapticHandler(), name: "haptic")
+        config.userContentController = contentController
+
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.scrollView.bounces = false
+        webView.scrollView.showsVerticalScrollIndicator = false
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.loadHTMLString(html, baseURL: nil)
+        return webView
+    }
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
+}
+
+class HapticHandler: NSObject, WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController,
+                                didReceive message: WKScriptMessage) {
+        guard let type = message.body as? String else { return }
+        switch type {
+        case "light":   UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        case "medium":  UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        case "heavy":   UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+        case "success": UINotificationFeedbackGenerator().notificationOccurred(.success)
+        case "warning": UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        default:        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+    }
+}
