@@ -635,36 +635,3 @@ updateAll();
 </script>
 </body>
 </html>
-
-"""
-
-    func makeUIView(context: Context) -> WKWebView {
-        let config = WKWebViewConfiguration()
-        let contentController = WKUserContentController()
-        contentController.add(HapticHandler(), name: "haptic")
-        config.userContentController = contentController
-
-        let webView = WKWebView(frame: .zero, configuration: config)
-        webView.scrollView.bounces = false
-        webView.scrollView.showsVerticalScrollIndicator = false
-        webView.scrollView.contentInsetAdjustmentBehavior = .never
-        webView.loadHTMLString(html, baseURL: nil)
-        return webView
-    }
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
-}
-
-class HapticHandler: NSObject, WKScriptMessageHandler {
-    func userContentController(_ userContentController: WKUserContentController,
-                                didReceive message: WKScriptMessage) {
-        guard let type = message.body as? String else { return }
-        switch type {
-        case "light":   UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        case "medium":  UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        case "heavy":   UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-        case "success": UINotificationFeedbackGenerator().notificationOccurred(.success)
-        case "warning": UINotificationFeedbackGenerator().notificationOccurred(.warning)
-        default:        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        }
-    }
-}
